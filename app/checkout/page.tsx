@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/store/cart';
 import { Button } from '@/components/ui/button';
@@ -17,17 +17,32 @@ export default function CheckoutPage() {
     city: '',
     postalCode: '',
   });
-  
-  const { items } = useCartStore();
+
+  const { items = [] } = useCartStore();
   const { user } = useAuth();
   const router = useRouter();
-  
+
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
+  useEffect(() => {
+    if (!user) {
+      router.push('/cart');
+    }
+  }, [user, router]);
+
   const handleCreateOrder = async () => {
+    if (!shippingInfo.fullName || !shippingInfo.address || !shippingInfo.city || !shippingInfo.postalCode) {
+      alert('Please fill in all shipping information.');
+      return;
+    }
+
+    if (items.length === 0) {
+      alert('Cart is empty. Add items to proceed.');
+      return;
+    }
+
     try {
       setIsProcessing(true);
-      
       const orderId = await createOrder({
         userId: user?.uid || 'guest',
         items,
@@ -35,18 +50,16 @@ export default function CheckoutPage() {
         shippingAddress: shippingInfo,
         status: 'pending',
       });
-
-      return orderId;
+      console.log('Order created:', orderId);
     } catch (error) {
       console.error('Order creation error:', error);
-      throw error;
+      alert('Failed to create order. Please try again.');
     } finally {
       setIsProcessing(false);
     }
   };
 
   if (!user) {
-    router.push('/cart');
     return null;
   }
 
@@ -58,37 +71,25 @@ export default function CheckoutPage() {
           <div>
             <h2 className="text-xl font-semibold mb-4">Shipping Information</h2>
             <div className="space-y-4">
-              <Input 
+              <Input
                 placeholder="Full Name"
                 value={shippingInfo.fullName}
-                onChange={(e) => setShippingInfo(prev => ({
-                  ...prev,
-                  fullName: e.target.value
-                }))}
+                onChange={(e) => setShippingInfo((prev) => ({ ...prev, fullName: e.target.value }))}
               />
-              <Input 
+              <Input
                 placeholder="Address"
                 value={shippingInfo.address}
-                onChange={(e) => setShippingInfo(prev => ({
-                  ...prev,
-                  address: e.target.value
-                }))}
+                onChange={(e) => setShippingInfo((prev) => ({ ...prev, address: e.target.value }))}
               />
-              <Input 
+              <Input
                 placeholder="City"
                 value={shippingInfo.city}
-                onChange={(e) => setShippingInfo(prev => ({
-                  ...prev,
-                  city: e.target.value
-                }))}
+                onChange={(e) => setShippingInfo((prev) => ({ ...prev, city: e.target.value }))}
               />
-              <Input 
+              <Input
                 placeholder="Postal Code"
                 value={shippingInfo.postalCode}
-                onChange={(e) => setShippingInfo(prev => ({
-                  ...prev,
-                  postalCode: e.target.value
-                }))}
+                onChange={(e) => setShippingInfo((prev) => ({ ...prev, postalCode: e.target.value }))}
               />
             </div>
           </div>
@@ -98,7 +99,9 @@ export default function CheckoutPage() {
           <div className="space-y-4">
             {items.map((item) => (
               <div key={item.id} className="flex justify-between">
-                <span>{item.name} x {item.quantity}</span>
+                <span>
+                  {item.name} x {item.quantity}
+                </span>
                 <span>${(item.price * item.quantity).toFixed(2)}</span>
               </div>
             ))}
@@ -109,11 +112,10 @@ export default function CheckoutPage() {
               </div>
             </div>
           </div>
-          <PaymentButton
-            amount={total}
-            orderId="temp-order-id" // This will be replaced with actual order ID
-            shippingInfo={shippingInfo}
-          />
+          <Button onClick={handleCreateOrder} disabled={isProcessing}>
+            {isProcessing ? 'Processing...' : 'Create Order'}
+          </Button>
+          <PaymentButton amount={total} orderId="temp-order-id" shippingInfo={shippingInfo} />
         </div>
       </div>
     </div>
