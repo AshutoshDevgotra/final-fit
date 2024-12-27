@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google';
 import Header from '@/components/layout/header';
 import { Providers } from '@/components/providers';
 import { Toaster } from '@/components/ui/toaster';
+import Script from 'next/script';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -25,6 +26,10 @@ export default function RootLayout({
           <main className="min-h-screen bg-background">{children}</main>
           <Toaster />
         </Providers>
+        <Script
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );
